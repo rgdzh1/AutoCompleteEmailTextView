@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="AutoCompleteEmailTextView">
+        <!--        下拉框中,条目的布局-->
+        <!--        其中,条目布局中,TextView的id必须为email,否则报错-->
+        <!--        Item布局抽出来是为了更好的适配不同情况-->
+        <attr name="acetv_adapter_ietm" format="reference" />
+    </declare-styleable>
+
+
+</resources>

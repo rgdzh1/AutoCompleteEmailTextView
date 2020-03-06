@@ -30,27 +30,37 @@ public class AutoCompleteEmailTextView extends AppCompatAutoCompleteTextView {
         super(context, attrs, defStyleAttr);
         initParame(context, attrs, defStyleAttr);
         init(context);
+        initListener();
     }
+
 
     @SuppressLint("ResourceAsColor")
     private void initParame(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.AutoCompleteEmailTextView, defStyleAttr, 0);
+        //下拉框中Item条目的资源文件
         mItemResourecID = typedArray.getResourceId(R.styleable.AutoCompleteEmailTextView_acetv_adapter_ietm, R.layout.library_acet);
         typedArray.recycle();
     }
 
     private void init(Context context) {
+        //触摸模式可以获取焦点
         this.setFocusableInTouchMode(true);
+        //下拉框所用的Adapter
         this.setAdapter(new EmailAutoCompleteAdapter(context, R.layout.library_acet, emailSufixs, this));
-        this.setThreshold(1);//输入1个字符之后立马开启框下拉展示
+        //输入一个字符后下拉框会弹出
+        this.setThreshold(1);
+    }
+
+    private void initListener() {
+        //为控件设置获取焦点监听
         this.setOnFocusChangeListener(new OnFocusChangeListener() {
             @Override
             public void onFocusChange(View v, boolean hasFocus) {
+                //获取焦点后
                 if (hasFocus) {
-                    //获取焦点时候
                     String mInputContetn = AutoCompleteEmailTextView.this.getText().toString().trim();
                     if (!TextUtils.isEmpty(mInputContetn)) {
-                        //如果输入的内容不为null,则执行过滤
+                        //内容不为空,则开始过滤当前内容,设置特定的规则,然后弹出下拉框
                         performFiltering(mInputContetn, 0);
                     }
                 }
@@ -60,12 +70,14 @@ public class AutoCompleteEmailTextView extends AppCompatAutoCompleteTextView {
 
     @Override
     protected void performFiltering(CharSequence text, int keyCode) {
-        //********输入的数据与Adapter中的某条数据开始的部分完全匹配,那么Adapter中的这条数据就会出现在下拉提示框中
         String mInputContent = text.toString();
-        int indexOf = mInputContent.indexOf("@");
         if (!mInputContent.equals("@")) {
+            //输入的内容不仅是@字符
+            //获取输入内容中,@字符的索引, 不存在为-1
+            int indexOf = mInputContent.indexOf("@");
             if (indexOf != -1) {
-                //如果输入的内容包含@,将@之后的内容交给AutoCompleteEmailTextView 处理
+                //如果输入内容为中含有@字符
+                //将@字符以后的内容,如@qq.com,作为控件的过滤器
                 super.performFiltering(mInputContent.substring(indexOf), keyCode);
             } else {
                 //如果没有输入@字符, 那对输入的内容进行正则匹配

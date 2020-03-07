@@ -1,198 +1,123 @@
-
-
-
-
-- 简单捋一捋 `AutoCompleteTextView`这个控件如果展示刷新的
-    -  当用户获取输入内容调用 `afterTextChanged()`->`refreshAutoCompleteResults()`-> `performFiltering()`
-        - 看看`performFiltering()`方法
-            ```java
-            protected void performFiltering(CharSequence text, int keyCode) {
-                //text 为用户输入的内容
-                mFilter.filter(text, this);
-            }
-            //来看看mFilter对象如何得到,当为AutoCompleteTextView设置Adapter时候获得.
-            public <T extends ListAdapter & Filterable> void setAdapter(T adapter) {
-                ...
-                if (mAdapter != null) {
-                    //noinspection unchecked
-                    mFilter = ((Filterable) mAdapter).getFilter();
-                    adapter.registerDataSetObserver(mObserver);
-                } else {
-                    mFilter = null;
-                }
-                ...
-            }
-            //再来看看ArrayAdapter中得getFilter(),最终返回得是一个ArrayFilter对象.
-            public @NonNull Filter getFilter() {
-                if (mFilter == null) {
-                    mFilter = new ArrayFilter();
-                }
-                return mFilter;
-            }
-            ```
-        - 看看 `Filter`中的 `filter()`方法,只看重要逻辑
-            ```java
-            //
-            public final void filter(CharSequence constraint, FilterListener listener) {
-                    //等会儿看 `RequestHandler` 类中的handlerMessage()
-                    mThreadHandler = new RequestHandler(thread.getLooper());
-                    Message message = mThreadHandler.obtainMessage(FILTER_TOKEN);
-                    RequestArguments args = new RequestArguments();
-                    args.constraint = constraint != null ? constraint.toString() : null;
-                    args.listener = listener;
-                    message.obj = args;
-                    ...
-                    //去看handlerMessage()
-                    mThreadHandler.sendMessageDelayed(message, delay);
-                }
-            }
-          
-            public void handleMessage(Message msg) {
-                int what = msg.what;
-                Message message;
-                switch (what) {
-                    case FILTER_TOKEN:
-                        RequestArguments args = (RequestArguments) msg.obj;
-                        try {
-                            //performFiltering()这个方法得去ArrayAdapter中看了.
-                            //args.constraint 为用户输入得内容
-                            args.results = performFiltering(args.constraint);
-                        } catch (Exception e) {
-                            ...
-                        } finally {
-                            //这里是从 ResultsHandler获取一个Message 
-                            message = mResultHandler.obtainMessage(what);
-                            message.obj = args;
-                            //将 message发送,由ResultsHandler中的handleMessage处理
-                            message.sendToTarget();
-                        }
-                        ...
-                        break;
-                    case FINISH_TOKEN:
-                       ...
-                        break;
-                }
-            }
-            //看下performFiltering()方法,只看主要的,
-            // prefix为用户输入内容
-            protected FilterResults performFiltering(CharSequence prefix) {
-                final FilterResults results = new FilterResults();
-                if (mOriginalValues == null) {
-                    synchronized (mLock) {
-                        //mObjects 看源码即可知道,该对象就是传入得数据
-                        //复制一份数据
-                        mOriginalValues = new ArrayList<>(mObjects);
-                    }
-                }
-                if (prefix == null || prefix.length() == 0) {
-                     ... 
-                     //我们只分析输入内容不为空的情况
-                } else {
-                    final String prefixString = prefix.toString().toLowerCase();
-                    final ArrayList<T> values;
-                    synchronized (mLock) {
-                        values = new ArrayList<>(mOriginalValues);
-                    }
-                    final int count = values.size();
-                    //对拷贝得数据进行遍历,然后得到前缀相符得数据,以这些相符得数据生成一个新的数据源  
-                    final ArrayList<T> newValues = new ArrayList<>();
-                    for (int i = 0; i < count; i++) {
-                        final T value = values.get(i);
-                        final String valueText = value.toString().toLowerCase();
-                        if (valueText.startsWith(prefixString)) {
-                            newValues.add(value);
-                        } else {
-                            ...
-                        }
-                    }
-                    results.values = newValues;
-                    results.count = newValues.size();
-                }
-                //将结果返回  
-                return results;
-            }
-            //来看看ResultsHandler中的handleMessage()
+> [项目地址](https://github.com/rgdzh1/AutoCompleteEmailTextView)
+##### 初始化
+- 获取Item布局文件id
+    ```java
+    @SuppressLint("ResourceAsColor")
+    private void initParame(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+        TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.AutoCompleteEmailTextView, defStyleAttr, 0);
+        //下拉框(ListPopupWindow)中Item条目的布局文件
+        mItemResourecID = typedArray.getResourceId(R.styleable.AutoCompleteEmailTextView_acetv_adapter_ietm, R.layout.library_acet);
+        typedArray.recycle();
+    }    
+    ```
+- 控件的一些设置
+    ```java
+    private void init(Context context) {
+        //触摸模式可以获取焦点
+        this.setFocusableInTouchMode(true);
+        //为AutoCompleteEmailTextView设置Adapter
+        this.setAdapter(new EmailAutoCompleteAdapter(context, R.layout.library_acet, emailSufixs, this));
+        //设置输入一个字符后下拉框会弹出
+        this.setThreshold(1);
+    }
+    ```
+- 为控件设置监听
+    ```java
+    private void initListener() {
+        //为AutoCompleteEmailTextView设置获取焦点监听
+        this.setOnFocusChangeListener(new OnFocusChangeListener() {
             @Override
-            public void handleMessage(Message msg) {
-                RequestArguments args = (RequestArguments) msg.obj;
-                //这个方法得在ArrayAdapter中看  
-                publishResults(args.constraint, args.results);
-                if (args.listener != null) {
-                    int count = args.results != null ? args.results.count : -1;
-                    //还记得  performFiltering()传入得this么,就是FilterListener对象
-                    //回到AutoCompleteTextView中看看 onFilterComplete()
-                    args.listener.onFilterComplete(count);
-                }
-            }
-            public void onFilterComplete(int count) {
-                //该方法最终将下拉框弹出来了  
-                updateDropDownForFilter(count);
-            }
-            //弹出下拉框
-            private void updateDropDownForFilter(int count) {
-                    final boolean dropDownAlwaysVisible = mPopup.isDropDownAlwaysVisible();
-                    final boolean enoughToFilter = enoughToFilter();
-                    if ((count > 0 || dropDownAlwaysVisible) && enoughToFilter) {
-                        if (hasFocus() && hasWindowFocus() && mPopupCanBeUpdated) {
-                            showDropDown();
-                        }
-                    } else if (!dropDownAlwaysVisible && isPopupShowing()) {
-                        ...
+            public void onFocusChange(View v, boolean hasFocus) {
+                //AutoCompleteEmailTextView获取焦点后
+                if (hasFocus) {
+                    String mInputContetn = AutoCompleteEmailTextView.this.getText().toString().trim();
+                    if (!TextUtils.isEmpty(mInputContetn)) {
+                        //用户输入的内容不为空,则执行performFiltering()过滤
+                        performFiltering(mInputContetn, 0);
                     }
                 }
-            //这个方法主要就是刷新ListPopupWindow中得数据
-            @Override
-            protected void publishResults(CharSequence constraint, FilterResults results) {
-                //results.values; 其实就是刚刚筛选过的匹配得数据,然后重新赋值给ListPopupWindow后刷新数据.
-                mObjects = (List<T>) results.values;
-                if (results.count > 0) {
-                    notifyDataSetChanged();
+            }
+        });
+    }
+    ```
+##### 过滤器定义
+- 定义好过滤器之后, 会根据返回的字符进行匹配,如果符合匹配则可以通过 `AutoCompleteEmailTextView` 的Adapter里的 `getItem()`方法获取到相匹配的字符
+    ```java
+    /**
+     * 自定义过滤器
+     *
+     * @param text
+     * @param keyCode
+     */
+    @Override
+    protected void performFiltering(CharSequence text, int keyCode) {
+        String mInputContent = text.toString();
+        if (!mInputContent.equals("@")) {
+            //输入的内容3种情况
+            //1.@
+            //2,@+非@字符
+            //3,非@字符
+            int indexOf = mInputContent.indexOf("@");
+            if (indexOf != -1) {
+                //这种是情况1和2
+                //因为含有@字符,只需要将@字符以后的字符串作为过滤器传入performFiltering()中
+                //之后会将过滤器与ArrayAdapter中的数据源匹配,最后会show出ListPopupWindow,然后在里面展示匹配的数据.
+                //看源码,该方法最终会触发`ListPopupWindow`的显示  
+                super.performFiltering(mInputContent.substring(indexOf), keyCode);
+            } else {
+                //这种是情况3
+                //首先判断内容是否包含特殊字符
+                if (mInputContent.matches("^[a-zA-Z0-9_]+$")) {
+                    //正常字符,那么将@字符作为过滤器,
+                    //过滤的时,如果ArrayAdapter数据源中的数据以@字符开头,那么该数据就符合条件,
+                    //最后会在ListPopupWindow里展示出来
+                    super.performFiltering("@", keyCode);
                 } else {
-                    notifyDataSetInvalidated();
+                    //包含特殊字符,隐藏弹窗
+                    this.dismissDropDown();
                 }
             }
-            ```
-    - 看看 `replaceText()`方法
-        - 首先由performCompletion()->replaceText(),搜索performCompletion()方法会出现由一个DropDownItemClickListener类,继承自AdapterView.OnItemClickListener,
-          很有可能会由Adapter回调onItemClick().可以看看 DropDownItemClickListener对象被设置给了谁. 可以发现最终设置给了ListPopupWindow对象.
-            ```java
-            mPopup.setOnItemClickListener(new DropDownItemClickListener());
-            ```
-          何时会触发DropDownItemClickListener的onItemClick()方法呢?
-          当点击ListPopupWindow种条目时,将会执行performItemClick(),再有performItemClick()回调onItemClick()方法
-            ```java
-            public boolean performItemClick(int position) {
-                if (isShowing()) {
-                    if (mItemClickListener != null) {
-                        ...
-                        mItemClickListener.onItemClick(list, child, position, adapter.getItemId(position));
-                    }
-                    return true;
-                }
-                return false;
-            }
-            ```
-        - 现在捋一捋调用的顺序:
-            - ListPopupWindow种条目被点击触发performItemClick(int position);
-            - 回调 `mItemClickListener.onItemClick(list, child, position, adapter.getItemId(position));`
-              ,我们需要关注 `adapter.getItemId(position)`这个值,他是AutoCompleteTextView种源数据对应的索引.
-            - 接着会调用 `performCompletion(v, position, id);` 可以看下该方法
-                ```java
-                private void performCompletion(View selectedView, int position, long id) {
-                    if (isPopupShowing()) {
-                        Object selectedItem;
-                        if (position < 0) {
-                            ...
-                        } else {
-                            //通过索引获取Adapter数据源中的数据
-                            selectedItem = mAdapter.getItem(position);
-                        }
-                        ...
-                        //终于看到想要的方法了,Adpater数据源中的数据最后将传递到该方法中
-                        replaceText(convertSelectionToString(selectedItem));
-                        ...
-                    }
-                }
-                ```
-          
-          
+        }
+    }
+    ```
+##### 内容显示
+- `ListPopupWindow`中条目被选中后, 会返回该条目索引对应的邮箱后缀到 `replaceText()`中, 再将拼接好的邮箱展示到控件上面就达到最终目的了.
+    ```java
+    /**
+     * @param text 该值为emailSufixs中的某个值,也就是邮箱的后缀了
+     */
+    @Override
+    protected void replaceText(CharSequence text) {
+        //获取用户输入的内容
+        String mInputContent = this.getText().toString();
+        int indexOf = mInputContent.indexOf("@");
+        if (indexOf != -1) {
+            //如果内容中间有@字符,则将@字符前的内容与邮箱后缀链接起来
+            mInputContent = mInputContent.substring(0, indexOf);
+        }
+        //将内容交由父类中的replaceText()方法,
+        //父类中的该方法最终会将拼接好的邮箱展示在控件里面,然后对光标进行了处理.
+        super.replaceText(mInputContent + text);
+    }
+    ```
+##### 其他方法
+- 他方法
+    ```java
+    /**
+     * 设置邮箱后缀,该数据会交由AutoCompleteEmailTextView的Adapter处理
+     *
+     * @param es
+     */
+    public void setEmailSufixs(String[] es) {
+        if (es != null && es.length > 0)
+            this.emailSufixs = es;
+    }
+    /**
+     * 界面销毁处理
+     */
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        this.dismissDropDown();
+    }
+    ```          

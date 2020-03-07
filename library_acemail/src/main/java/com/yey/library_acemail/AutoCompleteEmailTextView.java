@@ -93,6 +93,7 @@ public class AutoCompleteEmailTextView extends AppCompatAutoCompleteTextView {
                     //正常字符,那么将@字符作为过滤器,
                     //过滤的时,如果ArrayAdapter数据源中的数据以@字符开头,那么该数据就符合条件,
                     //最后会在ListPopupWindow里展示出来
+                    //看源码,该方法最终会触发`ListPopupWindow`的显示
                     super.performFiltering("@", keyCode);
                 } else {
                     //包含特殊字符,隐藏弹窗
@@ -115,7 +116,7 @@ public class AutoCompleteEmailTextView extends AppCompatAutoCompleteTextView {
             mInputContent = mInputContent.substring(0, indexOf);
         }
         //将内容交由父类中的replaceText()方法,
-        //可以看到父类对控件重新进来了内容更新,然后处理了光标位置.
+        //父类中的该方法最终会将拼接好的邮箱展示在控件里面,然后对光标进行了处理.
         super.replaceText(mInputContent + text);
     }
 
@@ -129,6 +130,9 @@ public class AutoCompleteEmailTextView extends AppCompatAutoCompleteTextView {
             this.emailSufixs = es;
     }
 
+    /**
+     * 界面销毁处理
+     */
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();

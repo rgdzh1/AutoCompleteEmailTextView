@@ -22,6 +22,8 @@ public class EmailAutoCompleteAdapter extends ArrayAdapter<String> {
         if (mConvertView == null) {
             mConvertView = LayoutInflater.from(getContext()).inflate(autoCompleteEmailTextView.getmItemResourecID(), null);
         }
+        //ListPopupWindow中展示Email的TevtView的id必须是email.
+        //如果需要在条目上增加图标或者其他内容, 不必关注展示email的控件,方便控制.
         TextView mShowTV = (TextView) mConvertView.findViewById(R.id.email);
         //获取用户输入的内容
         String mInputContent = autoCompleteEmailTextView.getText().toString();

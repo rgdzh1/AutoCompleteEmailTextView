@@ -184,4 +184,68 @@
     public AutoCompleteTextView(Context context, AttributeSet attrs, int defStyleAttr,
             int defStyleRes, Theme popupTheme) {
         super(context, attrs, defStyleAttr, defStyleRes);
-                  
+      mPopup = new ListPopupWindow(mPopupContext, attrs, defStyleAttr, defStyleRes);
+      mPopup.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+      mPopup.setPromptPosition(ListPopupWindow.POSITION_PROMPT_BELOW);
+      mPopup.setListSelector(popupListSelector);
+      //设置了一个条目点击的回调
+      mPopup.setOnItemClickListener(new DropDownItemClickListener());
+    }
+    ```
+- 看看回调方法是怎么被 `ListPopupWindow`调用的
+    ```java
+    //执行点击条目的方法
+    public boolean performItemClick(int position) {
+        if (isShowing()) {
+            if (mItemClickListener != null) {
+                final DropDownListView list = mDropDownList;
+                final View child = list.getChildAt(position - list.getFirstVisiblePosition());
+                final ListAdapter adapter = list.getAdapter();
+                mItemClickListener.onItemClick(list, child, position, adapter.getItemId(position));
+            }
+            return true;
+        }
+        return false;
+    }
+    ```    
+- 看看`DropDownItemClickListener`的`onItemClick()`.
+    ```java
+    private class DropDownItemClickListener implements AdapterView.OnItemClickListener {
+        public void onItemClick(AdapterView parent, View v, int position, long id) {
+            //最终用户点击条目后,执行了该方法  
+            performCompletion(v, position, id);
+        }
+    }
+    private void performCompletion(View selectedView, int position, long id) {
+        if (isPopupShowing()) {
+            Object selectedItem;
+            if (position < 0) {
+                selectedItem = mPopup.getSelectedItem();
+            } else {
+                //通过点击的条目获取到创建ArrayAdapter时候传入的数组中的某条数据
+                selectedItem = mAdapter.getItem(position);
+            }
+            if (selectedItem == null) {
+                Log.w(TAG, "performCompletion: no selected item");
+                return;
+            }
+            mBlockCompletion = true;
+            //看看这个方法,会将用户选中的条目数据传递给该方法.
+            replaceText(convertSelectionToString(selectedItem));
+            ...
+        }
+    }
+    ```
+- 到了最后一步,就是将下拉列表中的数据展示到 `AutoCompleteTextView`中,承接上一步的`replaceText()`
+    ```java
+    protected void replaceText(CharSequence text) {
+        //清空数据
+        clearComposingText();
+        //将`ListPopupWindow`中被选中的条目所代表的数据展示到`AutoCompleteTextView`控件中
+        setText(text);
+        Editable spannable = getText();
+        //处理下光标  
+        Selection.setSelection(spannable, spannable.length());
+    }
+    ```  
+      

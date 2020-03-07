@@ -15,6 +15,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         AutoCompleteEmailTextView emailTextView = (AutoCompleteEmailTextView) findViewById(R.id.acet);
+        emailTextView.setEmailSufixs(new String[]{"@163.com", "@gmail.com", "@hotmail.com", "@jk.com", "@yuo.com"});
 //        emailTextView.setDropDownBackgroundResource(android.R.color.white);
 //        emailTextView.setDropDownVerticalOffset(50);//向下偏移
 //        emailTextView.setDropDownWidth(100);

@@ -9,11 +9,13 @@
 
     <com.yey.library_acemail.AutoCompleteEmailTextView
         android:id="@+id/acet"
-        android:layout_width="wrap_content"
+        android:layout_width="200dp"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
+        android:layout_gravity="center"
         android:layout_marginTop="20dp"
         android:hint="Email Address"
+        android:lines="1"
+        android:maxLength="30"
         android:textColor="@color/colorAccent"
         android:textSize="18sp"
         app:acetv_adapter_ietm="@layout/auto_email" />

@@ -40,6 +40,6 @@
     emailTextView.setEmailSufixs(new String[]{"@163.com", "@gmail.com", "@hotmail.com", "@jk.com", "@yuo.com"});
     ```
 ##### 效果
-
+- 效果
     ![效果图](AutoCompleteEmailTextView.gif)  
     

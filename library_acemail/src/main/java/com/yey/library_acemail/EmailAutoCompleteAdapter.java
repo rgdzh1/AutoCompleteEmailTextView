@@ -23,18 +23,16 @@ public class EmailAutoCompleteAdapter extends ArrayAdapter<String> {
             mConvertView = LayoutInflater.from(getContext()).inflate(autoCompleteEmailTextView.getmItemResourecID(), null);
         }
         TextView mShowTV = (TextView) mConvertView.findViewById(R.id.email);
+        //获取用户输入的内容
         String mInputContent = autoCompleteEmailTextView.getText().toString();
         int index = mInputContent.indexOf("@");
-        //如果用户输入了@字符
+        //如果用户输入的内容中含有@字符
         if (index != -1) {
-            //那么就截取@字符之前的内容,将@之后的内容去除,也就是将邮箱尾缀去掉
+            //那么就截取@字符之前的内容,将@之后的内容去除
             mInputContent = mInputContent.substring(0, index);
         }
-        //将邮箱前缀的内容和尾缀内容拼接一起,展示到下拉框中的TextView中
+        //最后将不含有@字符的内容与邮箱后缀拼接在一起,最后展示到ListPopupWindow中的条目中
         mShowTV.setText(mInputContent + getItem(position));
-        mShowTV.setGravity(autoCompleteEmailTextView.getGravity());
-        int mTextSp = ACETDensityUtil.px2dip(autoCompleteEmailTextView.getContext(), autoCompleteEmailTextView.getTextSize());
-        mShowTV.setTextSize(mTextSp);
         return mConvertView;
     }
 }

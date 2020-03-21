@@ -1,22 +1,9 @@
 ### AutoCompleteEmailTextView
 > 感兴趣源码可以看看[博客](https://blog.csdn.net/MoLiao2046/article/details/104716849)
-##### 依赖
-- 在项目根目录build.gradle中配置repositories
-    ```groovy
-    allprojects {
-        repositories {
-            google()
-            jcenter()
-            //主要增加这个仓库
-            maven {
-                url 'https://dl.bintray.com/rgdzh1/Yey'
-            }
-        }
-    }
-    ```    
+##### 依赖   
 - 配置依赖, 在所在Module的build.gradle文件下
     ```groovy
-     implementation 'com.yey.library_acemail:library_acemail:0.0.2'
+     implementation 'com.yey.library_acemail:library_acemail:0.0.3'
     ```
 ##### 使用
 - xml文件

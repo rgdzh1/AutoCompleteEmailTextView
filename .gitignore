@@ -1,3 +1,6 @@
+
+#jcenter上传删除有用信息
+bintray.properties
 # Built application files
 *.apk
 *.aar
